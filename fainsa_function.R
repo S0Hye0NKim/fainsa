@@ -7,15 +7,13 @@ H_index <- function(num_cite) {
   if(num_cite[1] == 0) {
     return(0)
   }
-  
   H_index <- which(num_cite == ranking)
-  
   if(length(H_index) == 0) {
     H_index <- which(ranking < num_cite) %>% max()
   }
-  
   return(H_index)
 }
+
 
 find_IF <- function(JourNm, year) {
   # filter with Journal name and its published year.
@@ -25,28 +23,23 @@ find_IF <- function(JourNm, year) {
   if(!"JCR_List" %in% env) {
     return("Load the JCR_List, the reference table!")
   }
-  
   JourNm <- JourNm %>% 
     sub("amp;", "", x = .) %>%
     sub("&", "and", x = .) %>%
     gsub("[^[:alnum:]]", "", x = .)
-  
   if (year == 2018) {year <- year - 2}
   else {year <- year - 1}
-  
   JourNm <- JourNm %>%
     gsub(pattern = " ", replacement = "") %>%
     toupper()
-  
   target <- filter(JCR_List, Title == JourNm, Year == year) %>%
     filter(Percent == min(Percent))
-  
   if(nrow(target) == 0) {
     return(tibble(Title = JourNm, IF = NA, Percent = NA, Year = year))
   }
-  
   return(target %>% unique)
 }
+
 
 find_JourClass <- function(JourName, type = "Business") {
   # Find Journal Class in Business and Economics
@@ -54,19 +47,16 @@ find_JourClass <- function(JourName, type = "Business") {
   if(!"Business" %in% env | !"Economics" %in% env) {
     return("Load the reference table for Business&Economics!")
   }
-  
   JourName <- sub("amp;", "", JourName) %>%
     gsub(" ", "", .) %>%
     sub("&", "and", x = .) %>%
     gsub("[^[:alnum:]]", "", x = .) %>%
     toupper
-  
   if(type == "Economics") {
     target <- filter(Economics, Title == JourName)
   } else {
     target <- filter(Business, Title == JourName)
   }
-  
   if(nrow(target) == 0) {
     return(data.frame(JourNm = JourName, class = NA))
   }
