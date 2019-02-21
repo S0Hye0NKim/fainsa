@@ -1,0 +1,42 @@
+---
+title: "Cumulative Citation by year"
+author: "Sohyeon Kim"
+output: html_document
+header-includes:
+  - \usepackage{kotex}
+---
+
+```{r message=FALSE}
+library(tidyverse)
+library(readxl)
+```
+
+
+"Citation by year.xlsx"는 Web of Science 선택목록 인용보고서의 엑셀파일입니다. 이 때, 연도별 인용횟수가 나타나는데, 이를 누적 값으로 바꿔야 합니다. 
+
+```{r}
+data <- read_excel("Citation by year.xlsx") %>%
+  select(title = "제목", author = "저자", Year = "출판 연도", Total = "총 인용", "1990":"2019")
+```
+
+
+타겟 연도에 따라서 select function 뒷부분을 수정해주세요.
+
+
+```{r}
+# Create data frame with Citation information
+noinfo <- data %>% select(-title, -author, -Year, -Total) %>%
+  as.data.frame
+
+
+result <- data.frame()
+
+  for(i in 1:nrow(noinfo)) {
+    cumsum <- noinfo[i, ] %>% t %>% as.vector %>% cumsum # cumsum function does not work with matrix.
+    result <- rbind(result, cumsum)
+  }
+
+result <- cbind(data[,1:4], result) %>%
+  `colnames<-`(value = names(data))
+```
+
