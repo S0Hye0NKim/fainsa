@@ -62,3 +62,12 @@ find_JourClass <- function(JourName, type = "Business") {
   }
   return(target %>% unique)
 }
+
+
+redun_extract <- function(data){
+  # Extract duplicated paper from the data
+  # data colname should be "Title"
+  n_occur <- data.frame(table(data$Title))
+  result <- data[data$Title %in% n_occur$Var1[n_occur$Freq > 1], ]
+  return(result)
+}
