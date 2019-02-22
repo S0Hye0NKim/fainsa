@@ -1,0 +1,112 @@
+---
+title: "Calculate Wrok Experience"
+author: "Sohyeon Kim"
+output: html_document
+header-includes:
+  - \usepackage{kotex}
+---
+
+
+## Import Data
+```{r}
+library(tidyverse)
+library(rebus)
+library(readxl)
+```
+
+```{r}
+data <- read.csv("경력산정.csv")
+```
+
+
+
+```{r}
+# Split detail by its career
+
+# Split data by name
+list_data <- split(data, data$"성명") 
+
+
+# Split list data in detail
+detail_list <- list()
+for(i in 1:length(list_data)){
+  detail_list[i] <- str_split(list_data[[i]]$"내역", "\n")
+}
+names(detail_list) <- names(list_data)
+
+# Convert matrix to data.frame and bind the rows by name
+data_pretty <- lapply(detail_list, as.data.frame, stringsAsFactors = FALSE) %>% 
+  bind_rows(.id = "name") %>%
+  `colnames<-`(value = c("name", "detail"))
+
+```
+
+
+```{r warning = "FALSE"}
+# find the date and calculate its period 
+
+pattern <- capture(one_or_more(DGT)) %R% DOT %R% 
+           capture(one_or_more(DGT)) %R% DOT %R%
+           capture(one_or_more(DGT)) %R% "~" %R%
+           capture(one_or_more(DGT)) %R% DOT %R% 
+           capture(one_or_more(DGT)) %R% DOT %R%
+           capture(one_or_more(DGT))
+
+data_date <- str_match_all(data_pretty$detail, pattern) %>% # str_match handles character string.
+  lapply(FUN = as.data.frame, stringsAsFactors = FALSE) %>% 
+  bind_rows %>%
+  select(-1) %>% mutate_all(.funs = as.numeric) %>% # character is invalid to format "%02d"
+  mutate_all(.funs = sprintf, fmt = "%02d") 
+
+data_pretty <- cbind(data_pretty, data_date) %>%
+  `colnames<-`(value = c("name", "detail", "start_YY", "start_MM",
+                         "start_DD", "end_YY", "end_MM", "end_DD"))
+
+
+# Convert YY to YYYY
+for(i in 1:nrow(data_pretty)) {
+  if(str_sub(data_pretty[i, "start_YY"], start = 1, end = 2) < 50) {
+    data_pretty[i, "start_YY"] <- paste0("20", data_pretty[i, "start_YY"], collapse = "")
+  } else {
+    data_pretty[i, "start_YY"] <- paste0("19", data_pretty[i, "start_YY"], collapse = "")
+  }
+}
+for(i in 1:nrow(data_pretty)) {
+  if(str_sub(data_pretty[i, "end_YY"], start = 1, end = 2) < 50) {
+    data_pretty[i, "end_YY"] <- paste0("20", data_pretty[i, "end_YY"], collapse = "")
+  } else {
+    data_pretty[i, "end_YY"] <- paste0("19", data_pretty[i, "end_YY"], collapse = "")
+  }
+}
+
+
+data_pretty <- data_pretty %>%
+  unite(col = "start", "start_YY", "start_MM", "start_DD", sep = "-") %>%
+  unite(col = "end", "end_YY", "end_MM", "end_DD", sep = "-") %>%
+  mutate(start = as.Date(start), 
+         end = as.Date(end), 
+         period_day = as.numeric(difftime(end, start, units = "days") + 1)) 
+ # Career period covers start date.
+```
+
+
+```{r}
+# Calculate personal work experience.
+Career <- data_pretty %>%
+  group_by(name) %>%
+  summarise(period_day = sum(period_day)) 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
