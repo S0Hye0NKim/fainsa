@@ -1,0 +1,57 @@
+---
+title: "Paper Duplication Check"
+author: "Sohyeon Kim"
+output: pdf_document
+header-includes:
+  - \usepackage{kotex}
+---
+
+
+```{r message = FALSE}
+library(readxl)
+library(tidyverse)
+```
+
+
+```{r message = FALSE}
+data_past <- read_excel("190129  2018 연구업적 등록현황점검.xlsx", sheet = 2) %>%
+  select(ID = "개인번호", Title = "제목", JourNm = "게재지명") %>%
+  arrange(ID, Title, JourNm) %>%
+  mutate(Title = gsub("[^[:alnum:]]", "", Title) %>% toupper)
+
+data_2018 <- read_excel("190129  2018 연구업적 등록현황점검.xlsx", sheet = 1, col_type = "text") %>%
+      # without col_type option, ID is read as dttm
+  select(ID = "개인번호", Title = "제목", JourNm = "게재지명") %>% 
+  arrange(ID, Title, JourNm) %>%
+  mutate(Title = gsub("[^[:alnum:]]", "", Title) %>% toupper) 
+```
+
+
+# 1. 2016~2017년 논문 중복체크
+
+```{r}
+redun_extract <- function(data){
+  n_occur <- data.frame(table(data$Title))
+  result <- data[data$Title %in% n_occur$Var1[n_occur$Freq > 1], ]
+  return(result)
+}
+```
+
+```{r}
+personal <- split(data_past, data_past$ID)
+redun <- lapply(personal, FUN = redun_extract) %>% 
+  bind_rows 
+```
+
+redun에서 JourNm(게재지명)을 비교하여 16년과 17년 입력내용 중 중복항목을 찾아냅니다.
+
+ 
+## 2018년 vs 2016-2017 중복검사
+
+```{r}
+redun <- inner_join(data_2018, data_past, by = c("ID", "Title"), suffix = c(".2018", ".past"))
+```
+
+redun에서 2018년 게재지명과 past year 게재지명을 비교하여 중복항목을 찾아냅니다. 
+
+* 게재지명이 다르다면, 중복이 아닙니다. 
