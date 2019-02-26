@@ -15,7 +15,7 @@ H_index <- function(num_cite) {
 }
 
 
-find_IF <- function(JourNm, year) {
+find_IF <- function(JourNm, year, onlyIF = TRUE) {
   # filter with Journal name and its published year.
   # It needs the reference table 
   # return Impact Factor with minimum Percentage
@@ -37,7 +37,11 @@ find_IF <- function(JourNm, year) {
   if(nrow(target) == 0) {
     return(tibble(Title = JourNm, IF = NA, Percent = NA, Year = year))
   }
-  return(target %>% unique)
+  if(onlyIF == TRUE){
+    return(target %>% unique %>% select(IF) %>% as.numeric)
+  } else {
+    return(target %>% unique)
+    }
 }
 
 
