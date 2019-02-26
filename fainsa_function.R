@@ -35,7 +35,7 @@ find_IF <- function(JourNm, year, onlyIF = TRUE) {
   target <- filter(JCR_List, Title == JourNm, Year == year) %>%
     filter(Percent == min(Percent))
   if(nrow(target) == 0) {
-    return(tibble(Title = JourNm, IF = NA, Percent = NA, Year = year))
+    target <- tibble(Title = JourNm, IF = NA, Percent = NA, Year = year)
   }
   if(onlyIF == TRUE){
     return(target %>% unique %>% select(IF) %>% as.numeric)
