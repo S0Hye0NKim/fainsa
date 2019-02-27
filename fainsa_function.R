@@ -15,7 +15,7 @@ H_index <- function(num_cite) {
 }
 
 
-find_IF <- function(JourNm, year) {
+find_IF <- function(JourNm, year, onlyIF = TRUE) {
   # filter with Journal name and its published year.
   # It needs the reference table 
   # return Impact Factor with minimum Percentage
@@ -35,9 +35,13 @@ find_IF <- function(JourNm, year) {
   target <- filter(JCR_List, Title == JourNm, Year == year) %>%
     filter(Percent == min(Percent))
   if(nrow(target) == 0) {
-    return(tibble(Title = JourNm, IF = NA, Percent = NA, Year = year))
+    target <- tibble(Title = JourNm, IF = NA, Percent = NA, Year = year)
   }
-  return(target %>% unique)
+  if(onlyIF == TRUE){
+    return(target %>% unique %>% select(IF) %>% as.numeric)
+  } else {
+    return(target %>% unique)
+    }
 }
 
 
@@ -58,9 +62,9 @@ find_JourClass <- function(JourName, type = "Business") {
     target <- filter(Business, Title == JourName)
   }
   if(nrow(target) == 0) {
-    return(data.frame(Title = JourName, Grade = NA))
+    target <- tibble(Title = JourName, Grade = NA)
   }
-  return(target %>% unique)
+  return(target %>% unique %>% select(Grade) %>% as.character)
 }
 
 
