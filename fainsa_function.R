@@ -62,9 +62,9 @@ find_JourClass <- function(JourName, type = "Business") {
     target <- filter(Business, Title == JourName)
   }
   if(nrow(target) == 0) {
-    return(data.frame(Title = JourName, Grade = NA))
+    target <- tibble(Title = JourName, Grade = NA)
   }
-  return(target %>% unique)
+  return(target %>% unique %>% select(Grade) %>% as.character)
 }
 
 
