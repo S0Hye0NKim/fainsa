@@ -1,0 +1,284 @@
+---
+title: "Peer Review"
+author: "Sohyeon Kim"
+output: html_document
+header-includes:
+  - \usepackage{kotex}
+---
+
+* 동일분야 연구자 평가 시 사용하는 코드입니다. 
+
+# 0. Package & function
+```{r}
+library(tidyverse)
+library(RCurl)
+
+# functions
+source("https://raw.githubusercontent.com/S0Hye0NKim/fainsa/master/fainsa_function.R")
+
+# Data
+url_Business <- getURL("https://raw.githubusercontent.com/S0Hye0NKim/fainsa/master/Business.csv")
+Business <- read.csv(text = url_Business, stringsAsFactors = FALSE) %>% tbl_df
+
+url_Economics <- getURL("https://raw.githubusercontent.com/S0Hye0NKim/fainsa/master/Economics.csv")
+Economics <- read.csv(text = url_Economics, stringsAsFactors = FALSE) %>% tbl_df
+
+url_JCR_List <- getURL("https://raw.githubusercontent.com/S0Hye0NKim/fainsa/master/JCR_List.csv")
+JCR_List <- read.csv(text = url_JCR_List, stringsAsFactors = FALSE) %>% tbl_df
+```
+
+
+# 1. 문과대학
+
+문과대학은 국제 A/B, 국내 A/B 논문 수를 셉니다.
+
+```{r}
+data <- read.csv("Peer Review_문대.csv", stringsAsFactors = FALSE)
+
+result_count <- data %>%
+  select(Name = '성명', Univ = "소속대학", JourType = "학술지구분", MainCo = "저자역활2", 
+         Birth = "출생", Major = "전공분야") %>%
+  filter(!JourType == "기타", !JourType == "국내일반학술지") %>%
+  unite(Key, JourType, MainCo) %>%
+  group_by(Birth, Name, Univ, Major, Key) %>%
+  summarise(n = n()) %>%
+  spread(Key, n, fill = 0)
+```
+
+
+
+# 2. 사회과학대학
+
+사과대는 논문 count 데이터에 WOs 인용지수 데이터를 붙여넣습니다. 
+
+## 2-1. count data
+
+```{r}
+data <- read.csv("Peer Review_사과대.csv", stringsAsFactors = FALSE)
+
+result_count <- data %>%
+  select(Name = '성명', Univ = "소속대학", JourType = "학술지구분", Main_Co = "저자역활2", 
+         Birth = "출생", Major = "전공분야") %>%
+  filter(!JourType == "기타", !JourType == "국내일반학술지") %>%
+  unite(Key, JourType, Main_Co) %>%
+  group_by(Birth, Name, Univ, Major, Key) %>%
+  summarise(n = n()) %>%
+  spread(Key, n, fill = 0)
+```
+
+## 2-2. SCI data (주/공)
+
+```{r}
+SCI <- data %>%
+  select(Univ = "소속대학", Name = "성명", Birth = "출생", Major = "전공분야", JourType = "학술지구분",
+         Year = "게재년월", JourNm = "학술지명", WOS = "WOS인용지수", Main_Co = "저자역활2") %>%
+  filter(JourType == "국제전문학술지(SCI급)") %>%
+  mutate(Year = str_sub(Year, start = 1, end = 4) %>% as.numeric, 
+         WOS = ifelse(is.na(WOS), 0, WOS))
+  
+result_IF <- vector(mode = "numeric")
+for(i in 1:nrow(SCI)) {
+  IF <- find_IF(SCI$JourNm[i], SCI$Year[i])
+  result_IF <- c(result_IF, IF)
+}
+result_IF[is.na(result_IF)] <- 0
+
+SCI <- SCI %>%
+  mutate(IF = result_IF)
+
+result_SCI <-  SCI %>%
+  group_by(Birth, Univ, Name, Major) %>%
+  summarise(Total = n(), 
+            Citation = sum(WOS), 
+            Avg_Citation = mean(WOS), 
+            H_index = H_index(WOS), 
+            Sum_IF = sum(IF))
+```
+
+## 2-3. SCI_Main data (주저자)
+
+```{r}
+SCI_Main <- SCI %>%
+  filter(Main_Co == "주저자")
+
+result_SCI_Main <- SCI_Main %>%
+  group_by(Birth, Univ, Name, Major) %>%
+  summarise(Total = n(), 
+            Citation = sum(WOS), 
+            Avg_Citation = mean(WOS), 
+            H_index = H_index(WOS), 
+            Sum_IF = sum(IF))
+```
+
+## 2-4. 합치기
+
+```{r}
+result <- full_join(result_SCI, result_SCI_Main, by = c("Birth", "Univ", "Name", "Major"), 
+                    suffix = c(".All", ".Main")) %>% 
+  full_join(result_count, .) 
+result[is.na(result)] <- 0
+```
+
+
+
+# 3. 경제/경영
+
+경제/경여 분야는 등급별 count와 SCI 데이터를 사용합니다. 
+
+## 3-1. count 데이터
+
+```{r}
+data <- read.csv("Peer Review_경영경제.csv", stringsAsFactors = FALSE)
+
+result_count <- data %>%
+  select(Name = '성명', Univ = "소속대학", JourType = "학술지구분", MainCo = "저자역활2", 
+         Birth = "출생", Major = "전공분야") %>%
+  filter(!JourType == "기타", !JourType == "국내일반학술지") %>%
+  unite(Key, JourType, MainCo) %>%
+  group_by(Birth, Name, Univ, Major, Key) %>%
+  summarise(n = n()) %>%
+  spread(Key, n, fill = 0)
+```
+
+## 3-2. 등급별 count 데이터
+
+```{r}
+data_grade <- data %>%
+  select(Univ = "소속대학", Name = "성명", Birth = "출생", Major = "전공분야", JourType = "학술지구분",
+         Year = "게재년월", JourNm = "학술지명", WOS = "WOS인용지수", Main_Co = "저자역활2")
+
+result_JourClass <- vector(mode = "character")
+for(i in 1:nrow(data_grade)) {
+  Grade <- find_JourClass(data_grade$JourNm[i], type = "Economics")
+  result_JourClass <- c(result_JourClass, Grade)
+}
+
+data_grade <- data_grade %>%
+  mutate(Grade = result_JourClass)
+
+result_grade <- data_grade %>%
+  filter(!JourType == "기타", !JourType == "국내일반학술지") %>%
+  unite(Key, Grade, Main_Co) %>%
+  group_by(Birth, Name, Univ, Major, Key) %>%
+  summarise(n = n()) %>%
+  spread(Key, n)
+result_grade[is.na(result_grade)] <- 0
+
+```
+
+## 3-3. SCI data (주/공)
+
+```{r}
+SCI <- data %>%
+  select(Univ = "소속대학", Name = "성명", Birth = "출생", Major = "전공분야", JourType = "학술지구분",
+         Year = "게재년월", JourNm = "학술지명", WOS = "WOS인용지수", Main_Co = "저자역활2") %>%
+  filter(JourType == "국제전문학술지(SCI급)") %>%
+  mutate(Year = str_sub(Year, start = 1, end = 4) %>% as.numeric, 
+         WOS = ifelse(is.na(WOS), 0, WOS))
+
+result_IF <- vector(mode = "numeric")
+for(i in 1:nrow(SCI)) {
+  IF <- find_IF(SCI$JourNm[i], SCI$Year[i])
+  result_IF <- c(result_IF, IF)
+}
+result_IF[is.na(result_IF)] <- 0
+
+SCI <- SCI %>%
+  mutate(IF = result_IF)
+
+result_SCI <-  SCI %>%
+  group_by(Birth, Univ, Name, Major) %>%
+  summarise(Total = n(), 
+            Citation = sum(WOS), 
+            Avg_Citation = mean(WOS), 
+            H_index = H_index(WOS), 
+            Sum_IF = sum(IF))
+```
+
+## 3-4. SCI data (주저자)
+
+```{r}
+SCI_Main <- SCI %>%
+  filter(Main_Co == "주저자")
+
+result_SCI_Main <- SCI_Main %>%
+  group_by(Birth, Univ, Name, Major) %>%
+  summarise(Total = n(), 
+            Citation = sum(WOS), 
+            Avg_Citation = mean(WOS), 
+            H_index = H_index(WOS), 
+            Sum_IF = sum(IF))
+```
+
+## 3-5. 합치기
+
+```{r}
+result <- left_join(result_SCI, result_SCI_Main, by = c("Birth", "Univ", "Name", "Major"), 
+                    suffix = c(".All", ".Main")) %>%
+  full_join(result_grade, .) %>%
+  full_join(result_count, .)
+result[is.na(result)] <- 0
+```
+
+
+# 4. 이공계
+
+이공계 분야는 SCI data만 사용합니다. 
+
+## 4-1. SCI data (주/공)
+
+```{r}
+data <- read.csv("Peer Review_이공계.csv")
+
+SCI <- data %>%
+  select(Univ = "소속대학", Name = "성명", Birth = "출생", Major = "전공분야", JourType = "학술지구분",
+         Year = "게재년월", JourNm = "학술지명", WOS = "WOS인용지수", Main_Co = "저자역활2") %>%
+  filter(JourType == "국제전문학술지(SCI급)") %>%
+  mutate(Year = str_sub(Year, start = 1, end = 4) %>% as.numeric, 
+         WOS = ifelse(is.na(WOS), 0, WOS))
+  
+result_IF <- vector(mode = "numeric")
+for(i in 1:nrow(SCI)) {
+  IF <- find_IF(SCI$JourNm[i], SCI$Year[i])
+  result_IF <- c(result_IF, IF)
+}
+result_IF[is.na(result_IF)] <- 0
+
+SCI <- SCI %>%
+  mutate(IF = result_IF)
+
+result_SCI <-  SCI %>%
+  group_by(Birth, Univ, Name, Major) %>%
+  summarise(Total = n(), 
+            Citation = sum(WOS), 
+            Avg_Citation = mean(WOS), 
+            H_index = H_index(WOS), 
+            Sum_IF = sum(IF))
+```
+
+## 4-2. SCI_Main data (주저자)
+
+```{r}
+SCI_Main <- SCI %>%
+  filter(Main_Co == "주저자")
+
+result_SCI_Main <- SCI_Main %>%
+  group_by(Birth, Univ, Name, Major) %>%
+  summarise(Total = n(), 
+            Citation = sum(WOS), 
+            Avg_Citation = mean(WOS), 
+            H_index = H_index(WOS), 
+            Sum_IF = sum(IF))
+```
+
+## 4-3. 합치기
+
+```{r}
+result <- left_join(result_SCI, result_SCI_Main, by = c("Birth", "Univ", "Name", "Major"), 
+                    suffix = c(".All", ".Main"))
+result[is.na(result)] <- 0
+```
+
+
+
+
