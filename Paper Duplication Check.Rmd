@@ -10,6 +10,7 @@ header-includes:
 ```{r message = FALSE}
 library(readxl)
 library(tidyverse)
+source("https://raw.githubusercontent.com/S0Hye0NKim/fainsa/master/fainsa_function.R")
 ```
 
 
@@ -30,14 +31,6 @@ data_2018 <- read_excel("190129  2018 연구업적 등록현황점검.xlsx", she
 # 1. 2016~2017년 논문 중복체크
 
 ```{r}
-redun_extract <- function(data){
-  n_occur <- data.frame(table(data$Title))
-  result <- data[data$Title %in% n_occur$Var1[n_occur$Freq > 1], ]
-  return(result)
-}
-```
-
-```{r}
 personal <- split(data_past, data_past$ID)
 redun <- lapply(personal, FUN = redun_extract) %>% 
   bind_rows 
@@ -46,7 +39,7 @@ redun <- lapply(personal, FUN = redun_extract) %>%
 redun에서 JourNm(게재지명)을 비교하여 16년과 17년 입력내용 중 중복항목을 찾아냅니다.
 
  
-## 2018년 vs 2016-2017 중복검사
+# 2. 2018년 vs 2016-2017 중복검사
 
 ```{r}
 redun <- inner_join(data_2018, data_past, by = c("ID", "Title"), suffix = c(".2018", ".past"))
@@ -54,4 +47,4 @@ redun <- inner_join(data_2018, data_past, by = c("ID", "Title"), suffix = c(".20
 
 redun에서 2018년 게재지명과 past year 게재지명을 비교하여 중복항목을 찾아냅니다. 
 
-* 게재지명이 다르다면, 중복이 아닙니다. 
+* 논문 제목이 같아도 게재지명이 다르다면, 중복이 아닙니다. 
