@@ -94,7 +94,10 @@ data_pretty <- data_pretty %>%
 # Calculate personal work experience.
 Career <- data_pretty %>%
   group_by(name) %>%
-  summarise(period_day = sum(period_day)) 
+  summarise(period_day = sum(period_day)) %>%
+  mutate(Year = (period_day / 365) %>% floor, 
+         Month = ((period_day %% 365) / 30) %>% round(), 
+         Period = paste0(Year, "년 ", Month, "개월"))
 ```
 
 
