@@ -1,0 +1,74 @@
+---
+title: "Extracurricular activity"
+author: "Sohyeon Kim"
+output: pdf_document
+header-includes:
+  - \usepackage{kotex}
+---
+
+# Packages
+```{r warning = FALSE, message = FALSE}
+library(readxl)
+library(tidyverse)
+library(rebus)
+```
+
+# Data
+```{r}
+data <- read_excel("190502  2018 업적평가 봉사업적 종합점검(2차).xlsx") %>%
+  select(ID = "개인번호", area = "평가코드", area_detail = "세부코드", accept = "인정여부", 
+         org = "활동기관", detail = "제목")
+
+Gov <- read_excel("Administrative agency.xlsx") %>%
+  select(org = "기관명")
+
+Public <- read_excel("Public institution.xlsx") %>%
+  select(org = "기관명")
+```
+
+# Cleaning
+
+ (주), (사), (재)를 제거합니다. 
+
+```{r}
+pattern <- "\\(" %R% char_class("주", "사", "재") %R% "\\)"
+
+data <- data %>%
+  mutate(org = str_remove_all(org, pattern))
+
+Public <- Public %>%
+  mutate(org = str_remove_all(org, pattern)) %>%
+  mutate(org = str_remove_all(org, "㈜"))
+```
+
+$$data(\hat{org} = Gov |org \ne Gov)$$
+
+```{r}
+anti_join(x = data %>% filter(area_detail == "정부관련위원회"), y = Gov, by = "org")
+```
+
+$$data(\hat{org} = Gov | org = Public)$$
+
+```{r}
+inner_join(x = data %>% filter(area_detail == "정부관련위원회"), y = Public, by = "org")
+```
+
+$$data(\hat{org} = Public | org = Gov)$$
+
+```{r}
+inner_join(x = data %>% filter(area_detail == "공공/민간/기업활동"), 
+                                            y = Gov, by = "org")
+```
+
+$$data(\hat{org} = Public | org \ne Public)$$
+
+```{r}
+anti_join(x = data %>% filter(area_detail == "공공/민간/기업활동"), 
+                                              y = Public, by = "org")
+```
+
+
+
+
+
+
