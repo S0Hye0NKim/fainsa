@@ -253,7 +253,8 @@ result_SCI <-  SCI %>%
             Citation = sum(WOS), 
             Avg_Citation = mean(WOS), 
             H_index = H_index(WOS), 
-            Sum_IF = sum(IF))
+            Sum_IF = sum(IF), 
+            Mean_IF = mean(IF))
 ```
 
 ## 4-2. SCI_Main data (주저자)
@@ -268,7 +269,8 @@ result_SCI_Main <- SCI_Main %>%
             Citation = sum(WOS), 
             Avg_Citation = mean(WOS), 
             H_index = H_index(WOS), 
-            Sum_IF = sum(IF))
+            Sum_IF = sum(IF), 
+            Mean_IF = mean(IF))
 ```
 
 ## 4-3. 합치기
