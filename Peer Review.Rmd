@@ -231,7 +231,8 @@ result[is.na(result)] <- 0
 data <- read.csv("Peer Review_이공계.csv")
 
 SCI <- data %>%
-  select(Univ = "소속대학", Name = "성명", Birth = "출생", Major = "전공분야", JourType = "학술지구분",
+  select(Univ = "소속대학", Name = "성명", Birth = "출생", Major = "전공분야", 
+         Research = "연구분야", JourType = "학술지구분",
          Year = "게재년월", JourNm = "학술지명", WOS = "WOS인용지수", Main_Co = "저자역활2") %>%
   filter(JourType == "국제전문학술지(SCI급)") %>%
   mutate(Year = str_sub(Year, start = 1, end = 4) %>% as.numeric, 
@@ -248,12 +249,13 @@ SCI <- SCI %>%
   mutate(IF = result_IF)
 
 result_SCI <-  SCI %>%
-  group_by(Birth, Univ, Name, Major) %>%
+  group_by(Birth, Univ, Name, Major, Research) %>%
   summarise(Total = n(), 
             Citation = sum(WOS), 
             Avg_Citation = mean(WOS), 
             H_index = H_index(WOS), 
-            Sum_IF = sum(IF))
+            Sum_IF = sum(IF), 
+            Mean_IF = mean(IF))
 ```
 
 ## 4-2. SCI_Main data (주저자)
@@ -263,18 +265,20 @@ SCI_Main <- SCI %>%
   filter(Main_Co == "주저자")
 
 result_SCI_Main <- SCI_Main %>%
-  group_by(Birth, Univ, Name, Major) %>%
+  group_by(Birth, Univ, Name, Major, Research) %>%
   summarise(Total = n(), 
             Citation = sum(WOS), 
             Avg_Citation = mean(WOS), 
             H_index = H_index(WOS), 
-            Sum_IF = sum(IF))
+            Sum_IF = sum(IF), 
+            Mean_IF = mean(IF))
 ```
 
 ## 4-3. 합치기
 
 ```{r}
-result <- left_join(result_SCI, result_SCI_Main, by = c("Birth", "Univ", "Name", "Major"), 
+result <- left_join(result_SCI, result_SCI_Main, by = c("Birth", "Univ", "Name", "Major",
+                                                        "Research"), 
                     suffix = c(".All", ".Main"))
 result[is.na(result)] <- 0
 ```
