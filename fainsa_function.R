@@ -15,7 +15,7 @@ H_index <- function(num_cite) {
 }
 
 
-find_IF <- function(JourNm, year, onlyIF = TRUE) {
+find_IF <- function(JourNm, year, onlyIF = FALSE, only_perc = FALSE) {
   # filter with Journal name and its published year.
   # It needs the reference table 
   # return Impact Factor with minimum Percentage
@@ -39,10 +39,13 @@ find_IF <- function(JourNm, year, onlyIF = TRUE) {
   }
   if(onlyIF == TRUE){
     return(target %>% unique %>% select(IF) %>% as.numeric)
+  } else if(only_perc == TRUE) {
+    return(target %>% unique %>% select(Percent) %>% as.character)
   } else {
-    return(target %>% unique)
-    }
+    return(target %>% unique)}
 }
+    
+
 
 
 find_JourClass <- function(JourName, type = "Business") {
