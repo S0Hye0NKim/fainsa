@@ -27,7 +27,7 @@ find_IF <- function(JourNm, year, onlyIF = FALSE, only_perc = FALSE) {
     sub("amp;", "", x = .) %>%
     sub("&", "and", x = .) %>%
     gsub("[^[:alnum:]]", "", x = .)
-  if (year == 2019) {year <- (year - 2)}
+  if (year == 2020) {year <- (year - 2)}
   else {year <- year - 1}
   JourNm <- JourNm %>%
     gsub(pattern = " ", replacement = "") %>%
